@@ -2,6 +2,10 @@
 
 Ownerless and equal permission join-by-invite group based chat.
 
+Provides a set of commands to self-manage and chat in XM group.
+
+Uses `mod_storage` to save group and member data.
+
 ### Commands
 
 **/xm_new**
@@ -14,6 +18,7 @@ Ownerless and equal permission join-by-invite group based chat.
 
   - Invite another player to your XM group.
   - Invites are rate-limited by a 60-second expiration timer.
+  - Any group member can invite others to join the group.
   - You can only invite players who aren’t already in a group.
 
 **/xm_join**
@@ -45,9 +50,10 @@ Ownerless and equal permission join-by-invite group based chat.
 ___
 
 >> TODO:
->> - Save to mod storage
->> - Modulate into separate files
->> - Hook into external API (filtering, chat ranks)
+  - [x] Save to mod storage
+  - [ ] ~~Modulate into separate files~~
+  - [ ] Hook into external API (filtering, chat ranks)
+  - [ ] Better description of commands
 ___
 
 MIT © 2025 monk

@@ -1,9 +1,11 @@
  --==[[ XM Group Chat ]]==--
   --==[[ monk © 2025 ]]==--
 local invite_ttl = 60  -- invite expiry in seconds
-local xm_groups = {}  -- holds members within a group
-local xm_members = {}  -- members index
-local xm_invites = {}  -- non-persistent invite data
+local xm_invites = {}
+local xm_groups = {}
+local xm_members, save_xm_data = dofile(
+    core.get_modpath(core.get_current_modname()) .. "/data.lua")(xm_groups)
+
 
 -- generate unique group id from the first 12 chars of sha1
 local function create_unique_id(player_name)
@@ -24,6 +26,8 @@ local function new_group(player_name)
   local group_id = create_unique_id(player_name)
   xm_groups[group_id] = {[player_name] = true}
   xm_members[player_name] = group_id
+
+  save_xm_data(xm_members)
   return group_id
 end
 
@@ -121,6 +125,8 @@ local function join_invited(player_name)
   )
 
   broadcast_message(group_id, announce_join)
+
+  save_xm_data(xm_members)
   return true
 end
 
@@ -133,17 +139,21 @@ local function update_online_status(player_name, status)
   if group_exists then
     xm_groups[group_id][player_name] = status
 
-    if status == false then
+    if status == false then -- on_playerleave
       for member, _ in pairs(group_exists) do
         if member ~= player_name then
-          return -- at least one other member
+            -- exit early if at least one other member exists
+          return
         end
       end
+      -- otherwise we cull groups containing only 1 member
       xm_groups[group_id] = nil
       xm_members[player_name] = nil
+      save_xm_data(xm_members)
     end
-  elseif group_id then
+  elseif group_id then  -- stale or missing group
     xm_members[player_name] = nil
+    save_xm_data(xm_members)
   end
 end
 
@@ -171,6 +181,7 @@ local function leave_group(player_name)
     broadcast_message(group_id, announce_leave)
   end
 
+  save_xm_data(xm_members)
   return true
 end
 
@@ -179,7 +190,7 @@ end
 -- Create new group
 core.register_chatcommand("xm_new", {
   description = "Create a new XM group",
-  privs = {shout=true},
+  privs = {shout = true},
   func = function(name)
     if get_group_id(name) then
       return false, "#! You are already in an XM group."
@@ -223,6 +234,7 @@ core.register_chatcommand("xm_leave", {
 core.register_chatcommand("xm", {
   params = "<message>",
   description = "Send a message to your XM group",
+  privs = {shout = true},
   func = function(sender, message)
     local group_id = get_group_id(sender)
     if not group_id then
@@ -277,16 +289,24 @@ core.register_chatcommand("xm_list", {
 })
 
 
-core.register_on_joinplayer(function(player)  
+core.register_on_joinplayer(function(player)
   if player then
     update_online_status(player:get_player_name(), true)
   end
 end)
 
-core.register_on_leaveplayer(function(player) 
+core.register_on_leaveplayer(function(player)
   if player then
     update_online_status(player:get_player_name(), false)
   end
+end)
+
+core.register_on_shutdown(function()
+  local online_players = core.get_connected_players()
+  for _, player in ipairs(online_players) do
+    update_online_status(player:get_player_name(), false)
+  end
+  save_xm_data(xm_members)
 end)
 
 
