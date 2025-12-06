@@ -188,7 +188,7 @@ end
 
 
 -- Create new group
-core.register_chatcommand("xm_new", {
+core.register_chatcommand("xm-new", {
   description = "Create a new XM group",
   privs = {shout = true},
   func = function(name)
@@ -201,7 +201,7 @@ core.register_chatcommand("xm_new", {
 })
 
 -- Invite player
-core.register_chatcommand("xm_invite", {
+core.register_chatcommand("xm-invite", {
   params = "<player>",
   description = "Invite a player to your XM group",
   func = function(inviter, param)
@@ -211,8 +211,8 @@ core.register_chatcommand("xm_invite", {
 })
 
 -- Join group
-core.register_chatcommand("xm_join", {
-  description = "Join your pending XM invite",
+core.register_chatcommand("xm-join", {
+  description = "Accept a pending XM invitation",
 	privs = {shout = true},
   func = function(name)
     local ok, msg = join_invited(name)
@@ -221,7 +221,7 @@ core.register_chatcommand("xm_join", {
 })
 
 -- Leave group
-core.register_chatcommand("xm_leave", {
+core.register_chatcommand("xm-quit", {
   description = "Leave your XM group",
   func = function(name)
     local ok, msg = leave_group(name)
@@ -252,7 +252,7 @@ core.register_chatcommand("xm", {
 })
 
 
-core.register_chatcommand("xm_list", {
+core.register_chatcommand("xm-list", {
   params = "[player]",
   description = "List members of your XM group, or another player's group",
   func = function(name, param)
@@ -312,7 +312,7 @@ core.register_on_shutdown(function()
 end)
 
 
-core.register_chatcommand("xm_dump", {
+core.register_chatcommand("xm-dump", {
   description = "Dump xm data to log",
   privs = {server = true},
   func = function(name)
