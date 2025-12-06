@@ -268,7 +268,7 @@ core.register_chatcommand("xm-list", {
       return false, xmsg.player_not_found_they:format(target)
 
     elseif not core.get_player_by_name(target) then
-      return false, xmsg.player_offline_they
+      return false, xmsg.player_offline_they:format(target)
     end
 
     local group_id = get_group_id(target)
@@ -276,7 +276,7 @@ core.register_chatcommand("xm-list", {
 
     if not group then
       if param ~= "" then
-          return false, xmsg.player_no_group_they
+          return false, xmsg.player_no_group_they:format(target)
       else
           return false, xmsg.player_no_group_you
       end

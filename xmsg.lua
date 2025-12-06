@@ -11,7 +11,7 @@ return {
   invite_rate_limit_you  = "#! You are sending invites too often!",
   invite_rate_limit_they = "#! <%s> already has a pending invite!",
   invite_notify_group    = "#! %s invited %s to join the XM group!",
-  invite_notify_they     = "%s has invited you to join their XM group! To accept: /xm-join",
+  invite_notify_they     = "#! %s has invited you to join their XM group! To accept: /xm-join",
 
   join_no_invites_you = "#! You have no valid invite!",
   join_group_missing  = "#! Invalid invite, group doesn't exist!",
