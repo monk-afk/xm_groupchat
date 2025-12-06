@@ -276,7 +276,9 @@ core.register_chatcommand("xm_list", {
     end
 
     local members = {}
+    local total_online = 0
     for member, online in pairs(group) do
+      total_online = online and total_online + 1 or total_online
       local color = online and "green" or "red"
       local colored_name = core.colorize(color, member)
       table.insert(members, colored_name)
@@ -284,7 +286,7 @@ core.register_chatcommand("xm_list", {
 
     table.sort(members)
 
-    return true, "#! XM Group members (" .. #members .. "): " .. table.concat(members, ", ")
+    return true, ("#! XM Group members (%s / %s): %s"):format(total_online, #members, table.concat(members, ", "))
   end
 })
 
