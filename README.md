@@ -4,61 +4,50 @@ Ownerless and equal permission chat groups.
 
 [![ContentDB](https://content.luanti.org/packages/monk/xm_groupchat/shields/downloads/)](https://content.luanti.org/packages/monk/xm_groupchat/)
 
-Provides a set of commands to manage and chat in XM group.
-
-Uses `mod_storage` to save member data.
-
 ___
 
 ### Commands
 
+ > [!NOTE] Uses `mod_storage` to save member data.
+
 **/xm-new**
 
   - Create a new XM group.
-  - Any player may create groups freely.
-  - Each player may only belong to one group at a time.
+  - A player may only belong to one group at a time.
+  - XM groups have no hierarchy of privilege, every member is equal.
 
 **/xm-invite <player_name>**
 
-  - Invite another player to your XM group.
-  - Any group member can invite others to join the group.
-  - Invites are rate-limited by a 60-second expiration timer.
-  - You can only invite someone not already in a group.
+  - Sends an invitation to join your XM group.
+  - All group members can invite non-members to join their group.
+  - Sending and receiving invites limited to once every 60 seconds.
 
 **/xm-join**
 
   - Join the group you’ve been invited to.
-  - The invite is auto-declined in 60 seconds.
+  - The invite expires after 60 seconds.
 
 **/xm-quit**
 
   - Leave your current XM group.
   - Groups are deleted when the last member leaves the group.
   - Groups with one member are deleted when that player exits the server.
+  - Re-joining a group will require an invite.
 
 **/xm-list [player_name]**
 
-  - List members of your own group, or of another player’s group.
+  - List the names and online status of members in your group.
+  - Include another player’s name to list their group.
   - Member names are color-coded: green for online, red for offline.
 
 **/xm <message>**
 
   - Send a message to your XM group.
-  - Messages are prefixed with `#xm/`.
-  - Can easily be extended or filtered by other mods.
+  - Messages are delivered with prefix `/xm` and colored cyan.
 
 **/xm-dump**
   - Requires the server privilege.
   - Dumps all XM tables to debug.txt for inspection.
-
-___
-
->> TODO:
-  - [x] Save to mod storage
-  - [ ] ~~Modulate into separate files~~
-  - [ ] Hook into external API (filtering, chat ranks)
-  - [ ] Better description of commands
-  - [ ] Organize system messages
 
 ___
 
