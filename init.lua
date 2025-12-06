@@ -1,11 +1,16 @@
  --==[[ XM Group Chat ]]==--
   --==[[ monk © 2025 ]]==--
+local modpath = core.get_modpath(core.get_current_modname())
+
 local invite_ttl = 60  -- invite expiry in seconds
 local xm_invites = {}
-local xm_groups = {}
-local xm_members, save_xm_data = dofile(
-    core.get_modpath(core.get_current_modname()) .. "/data.lua")(xm_groups)
 
+  -- rebuild the groups table from members data
+local xm_groups = {}
+local xm_members, save_xm_data = dofile(modpath .. "/data.lua")(xm_groups)
+
+-- system message templates
+local xmsg = dofile(modpath .. "/xmsg.lua")
 
 -- generate unique group id from the first 12 chars of sha1
 local function create_unique_id(player_name)
@@ -60,22 +65,22 @@ local function send_invite(receiver_name, sender_name)
   local group_id = get_group_id(sender_name)
 
   if not group_id then
-    return false, "#! You are not in a group."
+    return false, xmsg.player_no_group_you
 
   elseif receiver_name and not receiver_name:match("^[a-zA-Z0-9_-]+$") then
-    return false, "#! Usage: /xm_invite <player>"
+    return false, xmsg.invite_usage -- "#! Usage: /xm_invite <player>"
 
   elseif not core.get_player_by_name(receiver_name) then
-    return false, "#! Unable to invite an offline player!"
+    return false, xmsg.player_offline_they:format(receiver_name)
 
   elseif has_invite(sender_name) then  -- rate-limit the inviter
-    return false, "#! You are sending invites too often."
+    return false, xmsg.invite_rate_limit_you
 
   elseif has_invite(receiver_name) then
-    return false, "#! Player already has a pending invite."
+    return false, xmsg.invite_rate_limit_they:format(receiver_name)
 
   elseif get_group_id(receiver_name) then
-    return false, "#! Player is already in a group."
+    return false, xmsg.player_group_conflict_they:format(receiver_name) -- "#! Player is already in a group."
   end
 
   xm_invites[sender_name] = true
@@ -89,11 +94,10 @@ local function send_invite(receiver_name, sender_name)
     end)
   }
 
-  local invite_announce = "#! %s invited %s to join the XM group! %s"
+  -- local invite_announce = "#! %s invited %s to join the XM group! %s"
+  broadcast_message(group_id, xmsg.invite_notify_group:format(sender_name, receiver_name))
 
-  broadcast_message(group_id, invite_announce:format(sender_name, receiver_name, ""))
-
-  core.chat_send_player(receiver_name, invite_announce:format(sender_name, "you", "To accept, use /xm_join"))
+  core.chat_send_player(receiver_name, xmsg.invite_notify_they:format(sender_name))
 
   return true
 end
@@ -102,31 +106,30 @@ end
 -- join a group via invite
 local function join_invited(player_name)
   if get_group_id(player_name) then
-    return false, "#! You are already in an XM group!"
+    return false, xmsg.player_group_conflict_you
   end
 
   local pending = has_invite(player_name)
 
   if not pending or type(pending) ~= "table" then
-    return false, "#! You have no valid invite."
+    return false, xmsg.join_no_invite_you
   end
 
   local group_id = pending.group_id
 
   if not group_id or not get_group_by_id(group_id) then
-    return false, "#! Invalid invite, group doesn't exist."
+    return false, xmsg.join_group_missing
   end
 
   xm_groups[group_id][player_name] = true
   xm_members[player_name] = group_id
 
-  local announce_join = string.format(
-    "#! %s joined the xm group!", core.colorize("#00EE22", player_name)
-  )
-
-  broadcast_message(group_id, announce_join)
-
   save_xm_data(xm_members)
+
+  broadcast_message(group_id,
+      xmsg.join_notify_group:format(
+        core.colorize("#00EE22", player_name)))
+
   return true
 end
 
@@ -162,8 +165,12 @@ end
 local function leave_group(player_name)
   local group_id = get_group_id(player_name)
   if not group_id then
-    return false, "#! You are not in a group."
+    return false, xmsg.player_no_group_you
   end
+
+  broadcast_message(group_id,
+      xmsg.leave_notify_group:format(
+          core.colorize("#EE0022", player_name)))
 
   xm_groups[group_id][player_name] = nil
   xm_members[player_name] = nil
@@ -173,59 +180,55 @@ local function leave_group(player_name)
 
   if not next(group) then
     xm_groups[group_id] = nil
-
-  else
-    local announce_leave = string.format(
-      "#! %s left the xm group.", core.colorize("#EE0022", player_name)
-    )
-    broadcast_message(group_id, announce_leave)
   end
 
   save_xm_data(xm_members)
+
   return true
 end
 
 
-
 -- Create new group
 core.register_chatcommand("xm-new", {
-  description = "Create a new XM group",
+  description = xmsg.cmd_new,
   privs = {shout = true},
   func = function(name)
     if get_group_id(name) then
-      return false, "#! You are already in an XM group."
+      return false, xmsg.player_group_conflict_you
     end
+
     new_group(name)
-    return true, "#! XM group created successfully."
+
+    return true, xmsg.group_new
   end
 })
 
 -- Invite player
 core.register_chatcommand("xm-invite", {
   params = "<player>",
-  description = "Invite a player to your XM group",
+  description = xmsg.cmd_invite,
   func = function(inviter, param)
     local ok, msg = send_invite(param, inviter)
-    return ok, msg or ("#! Invite sent to " .. param)
+    return ok, msg
   end
 })
 
 -- Join group
 core.register_chatcommand("xm-join", {
-  description = "Accept a pending XM invitation",
+  description = xmsg.cmd_join,
 	privs = {shout = true},
   func = function(name)
     local ok, msg = join_invited(name)
-    return ok, msg or "#! You joined the XM group."
+    return ok, msg
   end
 })
 
 -- Leave group
 core.register_chatcommand("xm-quit", {
-  description = "Leave your XM group",
+  description = xmsg.cmd_quit,
   func = function(name)
     local ok, msg = leave_group(name)
-    return ok, msg or "#! You left the XM group."
+    return ok, msg
   end
 })
 
@@ -233,20 +236,22 @@ core.register_chatcommand("xm-quit", {
 -- Send message to XM group
 core.register_chatcommand("xm", {
   params = "<message>",
-  description = "Send a message to your XM group",
+  description = xmsg.cmd_xm,
   privs = {shout = true},
   func = function(sender, message)
     local group_id = get_group_id(sender)
+
     if not group_id then
-      return false, "#! You are not in an XM group."
+      return false, xmsg.player_no_group_you
+
     elseif message == "" then
-      return false, "#! Usage: /xm <message>"
+      return false, xmsg.group_xm_usage
     end
 
-    local formatted_message = string.format(
-      "#/xm %s %s", sender, core.colorize("#00EEAA", message)
-    )
-    broadcast_message(group_id, formatted_message)
+    broadcast_message(group_id,
+        xmsg.group_xm_send:format(
+            sender, core.colorize("#00EEAA", message)))
+
     return true
   end
 })
@@ -254,14 +259,16 @@ core.register_chatcommand("xm", {
 
 core.register_chatcommand("xm-list", {
   params = "[player]",
-  description = "List members of your XM group, or another player's group",
+  description = xmsg.cmd_list,
   func = function(name, param)
-    local target = param:match("[a-zA-Z0-9_-]+") and param or name
+    local target = param:match("[a-zA-Z0-9_-]+")
+        and param or name
 
     if not core.player_exists(target) then
-      return false, "#! Player does not exist."
+      return false, xmsg.player_not_found_they:format(target)
+
     elseif not core.get_player_by_name(target) then
-      return false, "#! Player is offline."
+      return false, xmsg.player_offline_they
     end
 
     local group_id = get_group_id(target)
@@ -269,9 +276,9 @@ core.register_chatcommand("xm-list", {
 
     if not group then
       if param ~= "" then
-          return false, "#! " .. target .. " is not in an XM group."
+          return false, xmsg.player_no_group_they
       else
-          return false, "#! You are not in an XM group."
+          return false, xmsg.player_no_group_you
       end
     end
 
@@ -286,7 +293,8 @@ core.register_chatcommand("xm-list", {
 
     table.sort(members)
 
-    return true, ("#! XM Group members (%s / %s): %s"):format(total_online, #members, table.concat(members, ", "))
+    return true, xmsg.group_members:format(target,
+      total_online, #members, table.concat(members, ", "))
   end
 })
 
@@ -313,7 +321,7 @@ end)
 
 
 core.register_chatcommand("xm-dump", {
-  description = "Dump xm data to log",
+  description = xmsg.cmd_dump,
   privs = {server = true},
   func = function(name)
     local xm = {
